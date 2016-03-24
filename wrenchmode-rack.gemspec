@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'wrenchmode_rack/version'
+require 'wrenchmode'
 
 Gem::Specification.new do |spec|
-  spec.name          = "wrenchmode_rack"
-  spec.version       = WrenchmodeRack::VERSION
+  spec.name          = "wrenchmode-rack"
+  spec.version       = Wrenchmode::Rack::VERSION
   spec.authors       = ["Micah Wedemeyer"]
   spec.email         = ["me@micahwedemeyer.com"]
 
