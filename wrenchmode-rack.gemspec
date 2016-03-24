@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
 
   spec.summary       = "Rack middleware for using maintenance mode with Wrenchmode.com"
   #spec.description   = %q{TODO: Write a longer description or delete this line.}
-  spec.homepage      = "http://wrenchmode.com"
+  spec.homepage      = "http://github.com/micahwedemeyer/wrenchmode-rack"
   spec.license       = "MIT"
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
