@@ -1,5 +1,7 @@
 # Wrenchmode Rack
 
+[![Gem Version](https://badge.fury.io/rb/wrenchmode-rack.svg)](https://badge.fury.io/rb/wrenchmode-rack)
+
 This is a [Rack Middleware](http://rack.github.io/) for managing maintenance mode on your Ruby/Rack/Rails web application using Wrenchmode.
 
 ## Installation
