@@ -15,7 +15,8 @@ module Wrenchmode
         status_host: "localhost:4000",
         status_path: "/api/domains/status",
         check_delay_secs: 5,
-        logging: false
+        logging: false,
+        read_timeout_secs: 3
       }.merge(opts)
 
       @jwt = opts[:jwt]
@@ -23,13 +24,18 @@ module Wrenchmode
       @status_url = "#{opts[:status_protocol]}://#{opts[:status_host]}#{opts[:status_path]}"
       @check_delay_secs = opts[:check_delay_secs]
       @logging = opts[:logging]
+      @read_timeout_secs = opts[:read_timeout_secs]
       @logger = nil
 
+      @made_contact = false
       @check_thread = start_check_thread()
     end
 
     def call(env)      
       @logger = env['rack.logger'] if @logging && !@logger
+
+      # On startup, we need to give it a chance to make contact
+      sleep(0.1) while !@made_contact
 
       if @switched
         redirect
@@ -39,7 +45,7 @@ module Wrenchmode
     end      
 
     def update_status
-      resp = open(@status_url, open_uri_headers)
+      resp = open(@status_url, open_uri_headers.merge(read_timeout: @read_timeout_secs))
       body = resp.read
       json = JSON.parse(body)
 
@@ -52,14 +58,16 @@ module Wrenchmode
       end
 
     rescue OpenURI::HTTPError => e
-      log("Maintenance Check HTTP Error: #{e.message}")
+      log("Wrenchmode Check HTTP Error: #{e.message}")
       @switched = false
     rescue JSON::JSONError => e
-      log("Maintenance Check JSON Error: #{e.message}")
+      log("Wrenchmode Check JSON Error: #{e.message}")
       @switched = false
     rescue StandardError => e
-      log("Maintenance Check Unknown Error: #{e.message}")
+      log("Wrenchmode Check Unknown Error: #{e.message}")
       @switched = false
+    ensure
+      @made_contact = true
     end
 
     private
