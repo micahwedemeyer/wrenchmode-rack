@@ -11,8 +11,8 @@ module Wrenchmode
       opts = {
         jwt: "unauthorized",
         switched: false,
-        status_protocol: "http",
-        status_host: "localhost:4000",
+        status_protocol: "https",
+        status_host: "wrenchmode.com",
         status_path: "/api/domains/status",
         check_delay_secs: 5,
         logging: false,
