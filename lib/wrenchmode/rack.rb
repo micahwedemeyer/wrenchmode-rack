@@ -9,7 +9,6 @@ module Wrenchmode
       # Symbolize keys
       opts = opts.each_with_object({}) { |(k,v), h| h[k.to_sym] = v }
       opts = {
-        jwt: "unauthorized",
         switched: false,
         status_protocol: "https",
         status_host: "wrenchmode.com",
@@ -33,6 +32,11 @@ module Wrenchmode
 
     def call(env)      
       @logger = env['rack.logger'] if @logging && !@logger
+
+      unless @jwt
+        log(Logger::ERROR, "[Wrenchmode] No JWT specified so bypassing Wrenchmode. Please configure Wrenchmode with a JWT.")
+        return @app.call(env)
+      end
 
       # On startup, we need to give it a chance to make contact
       sleep(0.1) while !@made_contact
@@ -92,8 +96,8 @@ module Wrenchmode
       end
     end
 
-    def log(message)
-      @logger.info(message) if @logging && @logger
+    def log(message, level = nil)
+      @logger.add(level || Logger::INFO, message) if @logging && @logger
     end
   end
 end
