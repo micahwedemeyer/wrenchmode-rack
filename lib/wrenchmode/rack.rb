@@ -11,7 +11,7 @@ module Wrenchmode
       opts = {
         switched: false,
         status_protocol: "https",
-        status_host: "wrenchmode.com",
+        status_host: "api.wrenchmode.com",
         status_path: "/api/domains/status",
         check_delay_secs: 5,
         logging: false,
