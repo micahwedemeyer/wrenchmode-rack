@@ -79,7 +79,8 @@ module Wrenchmode
     def open_uri_headers
       {
         "Accept" => "application/json",
-        "Authorization" => @jwt
+        "Authorization" => @jwt,
+        "User-Agent" => "wrenchmode-rack-#{VERSION}"
       }
     end
 
