@@ -12,7 +12,7 @@ module Wrenchmode
         switched: false,
         status_protocol: "https",
         status_host: "api.wrenchmode.com",
-        status_path: "/api/domains/status",
+        status_path: "/api/projects/status",
         check_delay_secs: 5,
         logging: false,
         read_timeout_secs: 3
