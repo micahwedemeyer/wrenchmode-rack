@@ -3,6 +3,8 @@ require 'json'
 
 module Wrenchmode
   class Rack
+    VERSION = '0.0.6'
+
     def initialize(app, opts = {})
       @app = app       
 
