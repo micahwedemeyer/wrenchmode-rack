@@ -22,13 +22,51 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Usage instructions coming soon...
+### In a Rails application
 
-## Development
+```ruby
+# config/environments/production.rb
+config.middleware.use Wrenchmode::Rack, jwt: "your-very-long-jwt"
+```
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+### In a vanilla Rack application
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```ruby
+# your-app.rb
+require 'rubygems'
+require 'bundler/setup'
+Bundler.require(:default)
+
+use Wrenchmode::Rack, jwt: "your-long-jwt"
+```
+
+### In a Node/Express application
+
+Coming soon...
+
+### In a Wordpress installation
+
+Coming soon....
+
+## Advanced Configuration Options
+
+You can also specify the following options to the middleware layer:
+
+`force_open` - Set to true to force the middlware layer to allow all requests through, regardless of project status on Wrenchmode.com. Effectively disables the middleware. (Default false)
+
+`check_delay_secs` - Change this to modify the rate at which the middleware polls Wrenchmode for updates. Unlikely that this needs anything faster than the default. (Default 5)
+
+`logging` - Set to true in order to log information from the middleware layer to your logging facility. (Default false)
+
+## FAQ
+
+### Does every request to my server get proxied through Wrenchmode? Isn't that slow?
+
+No. The middleware does not function as a proxy at all in that fashion. Instead, the middleware spins up a separate thread that periodically checks the Wrenchmode API for changes and updates its own internal state. In other words, the middleware adds zero performance impact on requests to your server.
+
+### What if the Wrenchmode service is down? Will my project be brought down as well?
+
+No. The middleware is designed to fail open, meaning that if it encounters any errors or cannot contact the Wrenchmode API, it will automatically revert to "open" mode where it allows all requests to pass through normally to your server.
 
 ## Contributing
 

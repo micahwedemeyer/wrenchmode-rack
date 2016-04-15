@@ -11,7 +11,7 @@ module Wrenchmode
       # Symbolize keys
       opts = opts.each_with_object({}) { |(k,v), h| h[k.to_sym] = v }
       opts = {
-        switched: false,
+        force_open: false,
         status_protocol: "https",
         status_host: "api.wrenchmode.com",
         status_path: "/api/projects/status",
@@ -21,7 +21,7 @@ module Wrenchmode
       }.merge(opts)
 
       @jwt = opts[:jwt]
-      @switched = opts[:switched]
+      @force_open = opts[:force_open]
       @status_url = "#{opts[:status_protocol]}://#{opts[:status_host]}#{opts[:status_path]}"
       @check_delay_secs = opts[:check_delay_secs]
       @logging = opts[:logging]
@@ -43,7 +43,7 @@ module Wrenchmode
       # On startup, we need to give it a chance to make contact
       sleep(0.1) while !@made_contact
 
-      if @switched
+      if !@force_open && @switched
         redirect
       else
         @app.call(env)   
