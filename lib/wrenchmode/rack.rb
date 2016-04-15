@@ -12,6 +12,7 @@ module Wrenchmode
       opts = opts.each_with_object({}) { |(k,v), h| h[k.to_sym] = v }
       opts = {
         force_open: false,
+        ignore_test_mode: true,
         status_protocol: "https",
         status_host: "api.wrenchmode.com",
         status_path: "/api/projects/status",
@@ -21,6 +22,7 @@ module Wrenchmode
       }.merge(opts)
 
       @jwt = opts[:jwt]
+      @ignore_test_mode = opts[:ignore_test_mode] # Not implemented yet...
       @force_open = opts[:force_open]
       @status_url = "#{opts[:status_protocol]}://#{opts[:status_host]}#{opts[:status_path]}"
       @check_delay_secs = opts[:check_delay_secs]

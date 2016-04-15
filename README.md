@@ -2,7 +2,7 @@
 
 [![Gem Version](https://badge.fury.io/rb/wrenchmode-rack.svg)](https://badge.fury.io/rb/wrenchmode-rack)
 
-This is a [Rack Middleware](http://rack.github.io/) for managing maintenance mode on your Ruby/Rack/Rails web application using Wrenchmode.
+This is a [Rack Middleware](http://rack.github.io/) for managing maintenance mode on your Ruby/Rack/Rails web application using [Wrenchmode](http://wrenchmode.com).
 
 ## Installation
 
@@ -40,19 +40,13 @@ Bundler.require(:default)
 use Wrenchmode::Rack, jwt: "your-long-jwt"
 ```
 
-### In a Node/Express application
-
-Coming soon...
-
-### In a Wordpress installation
-
-Coming soon....
-
 ## Advanced Configuration Options
 
 You can also specify the following options to the middleware layer:
 
 `force_open` - Set to true to force the middlware layer to allow all requests through, regardless of project status on Wrenchmode.com. Effectively disables the middleware. (Default false)
+
+`ignore_test_mode` - (Coming soon...) Set to false to if you want the middleware to respond to a project that is in Test mode on Wrenchmode.com This can be useful if you want to test Wrenchmode in a development or staging environment prior to deploying to production. (Default true)
 
 `check_delay_secs` - Change this to modify the rate at which the middleware polls Wrenchmode for updates. Unlikely that this needs anything faster than the default. (Default 5)
 
