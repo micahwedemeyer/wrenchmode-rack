@@ -5,6 +5,10 @@ module Wrenchmode
   class Rack
     VERSION = '0.0.7'
 
+    SWITCH_URL_KEY = "switch_url"
+    TEST_MODE_KEY = "test_mode"
+    IS_SWITCHED_KEY = "is_switched"
+
     def initialize(app, opts = {})
       @app = app       
 
@@ -22,7 +26,7 @@ module Wrenchmode
       }.merge(opts)
 
       @jwt = opts[:jwt]
-      @ignore_test_mode = opts[:ignore_test_mode] # Not implemented yet...
+      @ignore_test_mode = opts[:ignore_test_mode]
       @force_open = opts[:force_open]
       @status_url = "#{opts[:status_protocol]}://#{opts[:status_host]}#{opts[:status_path]}"
       @check_delay_secs = opts[:check_delay_secs]
@@ -55,13 +59,9 @@ module Wrenchmode
     def update_status
       json = fetch_status
 
-      @switch_url = json["switch_url"]
-
-      if json["is_switched"]
-        @switched = true
-      else
-        @switched = false
-      end
+      @switch_url = json[SWITCH_URL_KEY]
+      test_mode = json[TEST_MODE_KEY]
+      @switched = json[IS_SWITCHED_KEY] && !(@ignore_test_mode && test_mode)
 
     rescue OpenURI::HTTPError => e
       log("Wrenchmode Check HTTP Error: #{e.message}")
