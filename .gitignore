@@ -8,3 +8,5 @@
 /spec/reports/
 /tmp/
 wrenchmode-rack-*.gem
+.ruby-version
+.ruby-gemset
