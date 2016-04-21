@@ -31,7 +31,6 @@ module Wrenchmode
       @logger = nil
 
       @made_contact = false
-      @check_thread = start_check_thread()
     end
 
     def call(env)      
@@ -43,6 +42,7 @@ module Wrenchmode
       end
 
       # On startup, we need to give it a chance to make contact
+      @check_thread ||= start_check_thread()
       sleep(0.1) while !@made_contact
 
       if !@force_open && @switched
@@ -53,9 +53,7 @@ module Wrenchmode
     end      
 
     def update_status
-      resp = open(@status_url, open_uri_headers.merge(read_timeout: @read_timeout_secs))
-      body = resp.read
-      json = JSON.parse(body)
+      json = fetch_status
 
       @switch_url = json["switch_url"]
 
@@ -79,6 +77,12 @@ module Wrenchmode
     end
 
     private
+
+    def fetch_status
+      resp = open(@status_url, open_uri_headers.merge(read_timeout: @read_timeout_secs))
+      body = resp.read
+      JSON.parse(body)
+    end
 
     def open_uri_headers
       {
