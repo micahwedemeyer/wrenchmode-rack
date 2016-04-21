@@ -11,7 +11,14 @@ describe Wrenchmode::Rack do
   let(:request) { Rack::MockRequest.new(stack) }
   let(:response) { request.get("/") }
 
-  let(:default_status_response) { {"is_switched" => true, "switch_url" => "http://myapp.wrenchmode.com/maintenance"} }
+  let(:default_status_response) do
+    {
+      "is_switched" => true,
+      "switch_url" => "http://myapp.wrenchmode.com/maintenance",
+      "test_mode" => false,
+      "ip_whitelist" => []
+    }
+  end
 
   describe "basic setup" do
     it "allows requests all the way through" do
@@ -56,6 +63,50 @@ describe Wrenchmode::Rack do
 
         it "redirects to wrenchmode" do
           expect(response).to be_wrenchmode_redirect
+        end
+      end
+    end
+
+    describe "with an IP whitelist" do
+      let(:ip_whitelist) do
+        [
+          "192.168.0.1/24",
+          "10.20.0.0/32"
+        ]
+      end
+      let(:allowed_ips) do
+        [
+          "192.168.0.1",
+          "192.168.0.20",
+          "192.168.0.255",
+          "10.20.0.0"
+        ]
+      end
+      let(:rejected_ips) do
+        [
+          "127.0.0.1",
+          "192.168.1.0",
+          "10.20.0.1"
+        ]
+      end
+      let(:status_response) { default_status_response.merge("ip_whitelist" => ip_whitelist) }
+      let(:stack) { Wrenchmode::Rack.new(app, jwt: "my-jwt") }
+
+      describe "with a request from inside the whitelist" do
+        it "passes through to the app" do
+          allowed_ips.each do |ip|
+            response = request.get("/", "REMOTE_ADDR" => ip)
+            expect(response).to be_standard_response
+          end
+        end
+      end
+
+      describe "with a request from outside the whitelist" do
+        it "redirects to wrenchmode" do
+          rejected_ips.each do |ip|
+            response = request.get("/", "REMOTE_ADDR" => ip)
+            expect(response).to be_wrenchmode_redirect
+          end
         end
       end
     end

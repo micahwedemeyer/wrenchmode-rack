@@ -1,5 +1,6 @@
 require 'open-uri'
 require 'json'
+require 'ipaddr'
 
 module Wrenchmode
   class Rack
@@ -8,6 +9,7 @@ module Wrenchmode
     SWITCH_URL_KEY = "switch_url"
     TEST_MODE_KEY = "test_mode"
     IS_SWITCHED_KEY = "is_switched"
+    IP_WHITELIST_KEY = "ip_whitelist"
 
     def initialize(app, opts = {})
       @app = app       
@@ -32,6 +34,7 @@ module Wrenchmode
       @check_delay_secs = opts[:check_delay_secs]
       @logging = opts[:logging]
       @read_timeout_secs = opts[:read_timeout_secs]
+      @ip_whitelist = []
       @logger = nil
 
       @made_contact = false
@@ -47,9 +50,17 @@ module Wrenchmode
 
       # On startup, we need to give it a chance to make contact
       @check_thread ||= start_check_thread()
-      sleep(0.1) while !@made_contact
+      sleep(0.01) while !@made_contact
 
-      if !@force_open && @switched
+      should_redirect = false
+      if @switched
+        req = ::Rack::Request.new(env)
+
+        should_redirect = !@force_open
+        should_redirect &&= !ip_whitelisted?(req)
+      end
+
+      if should_redirect
         redirect
       else
         @app.call(env)   
@@ -60,8 +71,9 @@ module Wrenchmode
       json = fetch_status
 
       @switch_url = json[SWITCH_URL_KEY]
-      test_mode = json[TEST_MODE_KEY]
+      test_mode = json[TEST_MODE_KEY] || false
       @switched = json[IS_SWITCHED_KEY] && !(@ignore_test_mode && test_mode)
+      @ip_whitelist = json[IP_WHITELIST_KEY] || []
 
     rescue OpenURI::HTTPError => e
       log("Wrenchmode Check HTTP Error: #{e.message}")
@@ -102,6 +114,14 @@ module Wrenchmode
           update_status
           sleep(@check_delay_secs)
         end
+      end
+    end
+
+    def ip_whitelisted?(request)
+      return false unless request.ip
+      client_ip = IPAddr.new(request.ip)
+      @ip_whitelist.any? do |ip_address|
+        IPAddr.new(ip_address).include?(client_ip)
       end
     end
 
