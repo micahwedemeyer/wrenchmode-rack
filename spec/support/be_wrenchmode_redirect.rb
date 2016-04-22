@@ -1,6 +1,6 @@
 RSpec::Matchers.define :be_wrenchmode_redirect do
   match do |response|
-    response.status == 302
+    response.status == 302 &&
     response.headers["Location"] =~ /wrenchmode.com/
   end
 

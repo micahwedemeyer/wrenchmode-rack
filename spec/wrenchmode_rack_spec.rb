@@ -7,9 +7,10 @@ describe Wrenchmode::Rack do
   end
 
   let(:response_body) { "Hello, world." }
-  let(:app) { proc{[200,{},[response_body]]} }
+  let(:app) { proc{ [200,{},[response_body]] } }
   let(:stack) { Wrenchmode::Rack.new(app, jwt: "my-jwt") }
-  let(:request) { Rack::MockRequest.new(stack) }
+  let(:linted_stack) { Rack::Lint.new(stack) }
+  let(:request) { Rack::MockRequest.new(linted_stack) }
   let(:response) { request.get("/") }
 
   let(:default_status_response) do

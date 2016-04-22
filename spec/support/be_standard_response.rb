@@ -1,6 +1,6 @@
 RSpec::Matchers.define :be_standard_response do
   match do |response|
-    response.status == 200
+    response.status == 200 &&
     response.body == "Hello, world."
   end
 
