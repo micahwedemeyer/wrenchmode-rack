@@ -12,15 +12,17 @@ module Wrenchmode
     TEST_MODE_KEY = "test_mode"
     IS_SWITCHED_KEY = "is_switched"
     IP_WHITELIST_KEY = "ip_whitelist"
+    REVERSE_PROXY_KEY = "reverse_proxy"
 
     def initialize(app, opts = {})
       @app = app       
 
       # Symbolize keys
-      opts = opts.each_with_object({}) { |(k,v), h| h[k.to_sym] = v }
+      opts = symbolize_keys(opts)
       opts = {
         force_open: false,
         ignore_test_mode: true,
+        disable_local_wrench: false, # LocalWrench is our "brand name", want to avoid scaring people will talk of proxies
         status_protocol: "https",
         status_host: "api.wrenchmode.com",
         status_path: "/api/projects/status",
@@ -31,6 +33,7 @@ module Wrenchmode
 
       @jwt = opts[:jwt]
       @ignore_test_mode = opts[:ignore_test_mode]
+      @disable_reverse_proxy = opts[:disable_local_wrench]
       @force_open = opts[:force_open]
       @status_url = "#{opts[:status_protocol]}://#{opts[:status_host]}#{opts[:status_path]}"
       @check_delay_secs = opts[:check_delay_secs]
@@ -38,6 +41,8 @@ module Wrenchmode
       @read_timeout_secs = opts[:read_timeout_secs]
       @ip_whitelist = []
       @logger = nil
+
+      @enable_reverse_proxy = false
 
       @made_contact = false
     end
@@ -54,18 +59,22 @@ module Wrenchmode
       @check_thread ||= start_check_thread()
       sleep(0.01) while !@made_contact
 
-      should_redirect = false
+      should_display_wrenchmode = false
       if @switched
         req = ::Rack::Request.new(env)
 
-        should_redirect = !@force_open
-        should_redirect &&= !ip_whitelisted?(req)
+        should_display_wrenchmode = !@force_open
+        should_display_wrenchmode &&= !ip_whitelisted?(req)
       end
 
-      if should_redirect
-        redirect
+      if should_display_wrenchmode
+        if @enable_reverse_proxy
+          reverse_proxy
+        else
+          redirect
+        end
       else
-        @app.call(env)   
+        @app.call(env)
       end
     end      
 
@@ -76,6 +85,12 @@ module Wrenchmode
       test_mode = json[TEST_MODE_KEY] || false
       @switched = json[IS_SWITCHED_KEY] && !(@ignore_test_mode && test_mode)
       @ip_whitelist = json[IP_WHITELIST_KEY] || []
+
+      @enable_reverse_proxy = false
+      if json[REVERSE_PROXY_KEY] && !@disable_reverse_proxy
+        @enable_reverse_proxy = json[REVERSE_PROXY_KEY]["enabled"]
+        @reverse_proxy_config = symbolize_keys(json[REVERSE_PROXY_KEY])
+      end
 
     rescue OpenURI::HTTPError => e
       log("Wrenchmode Check HTTP Error: #{e.message}")
@@ -115,7 +130,19 @@ module Wrenchmode
     end
 
     def redirect
-      [302, {'Location' => @switch_url, 'Content-Type' => 'text/html', 'Content-Length' => '0'}, []]
+      [
+        302,
+        {'Location' => @switch_url, 'Content-Type' => 'text/html', 'Content-Length' => '0'},
+        []
+      ]
+    end
+
+    def reverse_proxy
+      [
+        @reverse_proxy_config[:http_status],
+        @reverse_proxy_config[:response_headers],
+        [@reverse_proxy_config[:response_body]]
+      ]
     end
 
     def start_check_thread
@@ -156,5 +183,10 @@ module Wrenchmode
     def log(message, level = nil)
       @logger.add(level || Logger::INFO, message) if @logging && @logger
     end
+
+    def symbolize_keys(hash)
+      hash.each_with_object({}) { |(k,v), h| h[k.to_sym] = v }
+    end
+
   end
 end

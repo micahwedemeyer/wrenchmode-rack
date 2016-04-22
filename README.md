@@ -53,6 +53,8 @@ You can also specify the following options to the middleware layer:
 
 `ignore_test_mode` - (Coming soon...) Set to false to if you want the middleware to respond to a project that is in Test mode on Wrenchmode.com This can be useful if you want to test Wrenchmode in a development or staging environment prior to deploying to production. (Default true)
 
+`disable_local_wrench` - (Coming soon...) Set to true if you want to disable LocalWrench mode, where the Wrenchmode page is served on your domain. Disabling it will instead force a redirect to the Wrenchmode.com domain. Note: Unless you explicitly want this behavior, it's best to leave this at the default. (Default false)
+
 `check_delay_secs` - Change this to modify the rate at which the middleware polls Wrenchmode for updates. Unlikely that this needs anything faster than the default. (Default 5)
 
 `logging` - Set to true in order to log information from the middleware layer to your logging facility. (Default false)

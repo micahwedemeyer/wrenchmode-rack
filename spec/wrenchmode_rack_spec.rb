@@ -112,6 +112,47 @@ describe Wrenchmode::Rack do
         end
       end
     end
+
+    describe "in reverse proxy mode" do
+      let(:status_response) do
+        default_status_response.merge(
+          "reverse_proxy" => {
+            "enabled" => true,
+            "http_status" => 500, # Normally, it would be a 503, but we're testing the ability to override
+            "response_body" => "<h1>This is the maintenance page!</h1>",
+            "response_headers" => {
+              "X-Custom-Header" => "foo",
+              "X-Other-Header" => "bar"
+            }
+          }
+        )
+      end
+
+      before do
+        allow(stack).to receive(:fetch_status).and_return(status_response)
+      end
+
+      it "responds with the status code" do
+        expect(response.status).to eq(500)
+      end
+
+      it "responds with the proxy body" do
+        expect(response.body).to match(/This is the maintenance page/)
+      end
+
+      it "responds with the custom headers" do
+        expect(response.headers["X-Custom-Header"]).to eq("foo")
+        expect(response.headers["X-Other-Header"]).to eq("bar")
+      end
+
+      describe "with reverse proxy disabled" do
+        let(:stack) { Wrenchmode::Rack.new(app, disable_local_wrench: true, jwt: "my-jwt") }
+
+        it "redirects instead of reverse proxy response" do
+          expect(response).to be_wrenchmode_redirect
+        end
+      end
+    end
   end
 
   describe "status update to the wrenchmode server" do
