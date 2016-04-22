@@ -26,7 +26,12 @@ Or install it yourself as:
 
 ```ruby
 # config/environments/production.rb
-config.middleware.use Wrenchmode::Rack, jwt: "your-very-long-jwt"
+config.middleware.use Wrenchmode::Rack, jwt: "your-long-jwt"
+
+# If you want to test in staging prior to deploying to production.
+# (Coming soon, still not implemented...)
+# config/environments/staging.rb
+config.middleware.use Wrenchmode::Rack, ignore_test_mode: false, jwt: "your-long-jwt"
 ```
 
 ### In a vanilla Rack application
