@@ -1,9 +1,11 @@
-require 'open-uri'
+require 'net/http'
+require 'uri'
 require 'json'
 require 'ipaddr'
 
 module Wrenchmode
   class Rack
+    CLIENT_NAME = "wrenchmode-rack"
     VERSION = '0.0.7'
 
     SWITCH_URL_KEY = "switch_url"
@@ -44,7 +46,7 @@ module Wrenchmode
       @logger = env['rack.logger'] if @logging && !@logger
 
       unless @jwt
-        log(Logger::ERROR, "[Wrenchmode] No JWT specified so bypassing Wrenchmode. Please configure Wrenchmode with a JWT.")
+        log("[Wrenchmode] No JWT specified so bypassing Wrenchmode. Please configure Wrenchmode with a JWT.", Logger::ERROR)
         return @app.call(env)
       end
 
@@ -91,16 +93,24 @@ module Wrenchmode
     private
 
     def fetch_status
-      resp = open(@status_url, open_uri_headers.merge(read_timeout: @read_timeout_secs))
-      body = resp.read
+      payload = JSON.generate(build_update_package)
+      body = nil
+
+      uri = URI.parse(@status_url)
+      Net::HTTP.start(uri.host, uri.port, open_timeout: @read_timeout_secs, read_timeout: @read_timeout_secs) do |http|
+        response = http.post(uri, payload, post_headers)
+        body = response.read_body
+      end
+
       JSON.parse(body)
     end
 
-    def open_uri_headers
+    def post_headers
       {
+        "Content-Type" => "application/json",
         "Accept" => "application/json",
         "Authorization" => @jwt,
-        "User-Agent" => "wrenchmode-rack-#{VERSION}"
+        "User-Agent" => "#{CLIENT_NAME}-#{VERSION}"
       }
     end
 
@@ -123,6 +133,24 @@ module Wrenchmode
       @ip_whitelist.any? do |ip_address|
         IPAddr.new(ip_address).include?(client_ip)
       end
+    end
+
+    def build_update_package
+      {
+        hostname: Socket.gethostname,
+        ip_address: guess_ip_address,
+        pid: Process.pid,
+        client_name: CLIENT_NAME,
+        client_version: VERSION
+      }
+    end
+
+    def guess_ip_address
+      address = Socket.ip_address_list.find { |addr| addr.ipv4? && !addr.ipv4_loopback? && !addr.ipv4_private? }
+      address ? address.ip_address : nil
+    rescue StandardError => e
+      log("Wrenchmode error trying to guess the IP address: #{e.inspect}")
+      nil
     end
 
     def log(message, level = nil)

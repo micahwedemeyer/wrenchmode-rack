@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'socket'
 
 describe Wrenchmode::Rack do
   it 'has a version number' do
@@ -109,6 +110,19 @@ describe Wrenchmode::Rack do
           end
         end
       end
+    end
+  end
+
+  describe "status update to the wrenchmode server" do
+    it "builds the correct update package" do
+      package = stack.send(:build_update_package)
+      expect(package[:hostname]).to eq(Socket.gethostname)
+      expect(package[:pid]).to eq(Process.pid)
+      expect(package[:client_name]).to eq("wrenchmode-rack")
+      expect(package[:client_version]).to eq(Wrenchmode::Rack::VERSION)
+
+      # Not really sure how to test this, since it will never be right on the test machine...
+      expect(package[:ip_address]).to be_nil
     end
   end
 end
