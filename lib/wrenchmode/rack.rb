@@ -164,12 +164,26 @@ module Wrenchmode
 
     def build_update_package
       {
-        hostname: Socket.gethostname,
+        hostname: guess_hostname,
         ip_address: guess_ip_address,
-        pid: Process.pid,
+        pid: guess_pid,
         client_name: CLIENT_NAME,
         client_version: VERSION
       }
+    end
+
+    def guess_pid
+      Process.pid
+    rescue StandardError => e
+      log("Wrenchmode error trying to guess PID: #{e.inspect}")
+      nil
+    end
+
+    def guess_hostname
+      Socket.gethostname
+    rescue StandardError => e
+      log("Wrenchmode error trying to guess the hostname: #{e.inspect}")
+      nil
     end
 
     def guess_ip_address
