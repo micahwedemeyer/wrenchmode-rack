@@ -6,7 +6,7 @@ require 'ipaddr'
 module Wrenchmode
   class Rack
     CLIENT_NAME = "wrenchmode-rack"
-    VERSION = '0.0.7'
+    VERSION = '0.0.8'
 
     SWITCH_URL_KEY = "switch_url"
     TEST_MODE_KEY = "test_mode"
