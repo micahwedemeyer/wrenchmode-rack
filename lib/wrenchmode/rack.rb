@@ -112,7 +112,8 @@ module Wrenchmode
       body = nil
 
       uri = URI.parse(@status_url)
-      Net::HTTP.start(uri.host, uri.port, open_timeout: @read_timeout_secs, read_timeout: @read_timeout_secs) do |http|
+      use_ssl = uri.scheme == "https"
+      Net::HTTP.start(uri.host, uri.port, open_timeout: @read_timeout_secs, read_timeout: @read_timeout_secs, use_ssl: use_ssl) do |http|
         response = http.post(uri, payload, post_headers)
         body = response.read_body
       end
