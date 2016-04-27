@@ -45,7 +45,11 @@ module Wrenchmode
       @enable_reverse_proxy = false
 
       @made_contact = false
-      @semaphore = Mutex.new
+
+      # Use a queue with 0 or 1 items to allow the threads to communicate. When a response from the main Wrenchmode server is received,
+      # parse the JSON and put the hash in the queue. Then, the main request thread will update the underlying middleware state
+      # the next time a request is received.
+      @queue = Queue.new
     end
 
     def call(env)      
@@ -60,9 +64,16 @@ module Wrenchmode
       @check_thread ||= start_check_thread()
       sleep(0.01) while !@made_contact
 
-      should_display_wrenchmode = false
-      @semaphore.lock
+      # If we've gotten a new response from the server, use it
+      # to update local status
+      json = begin
+        @queue.pop(true)
+      rescue ThreadError
+        nil
+      end
+      update_status(json) if json
 
+      should_display_wrenchmode = false
       if @switched
         req = ::Rack::Request.new(env)
 
@@ -71,25 +82,17 @@ module Wrenchmode
       end
 
       if should_display_wrenchmode
-        rack_response = if @enable_reverse_proxy
+        if @enable_reverse_proxy
           reverse_proxy
         else
           redirect
         end
-
-        @semaphore.unlock
-        rack_response
       else
-        @semaphore.unlock
         @app.call(env)
       end
     end      
 
-    def update_status
-      json = fetch_status
-
-      @semaphore.lock
-
+    def update_status(json)
       @switch_url = json[SWITCH_URL_KEY]
       test_mode = json[TEST_MODE_KEY] || false
       @switched = json[IS_SWITCHED_KEY] && !(@ignore_test_mode && test_mode)
@@ -100,24 +103,30 @@ module Wrenchmode
         @enable_reverse_proxy = json[REVERSE_PROXY_KEY]["enabled"]
         @reverse_proxy_config = symbolize_keys(json[REVERSE_PROXY_KEY])
       end
-
-    rescue OpenURI::HTTPError => e
-      log("Wrenchmode Check HTTP Error: #{e.message}")
-      @switched = false
-    rescue JSON::JSONError => e
-      log("Wrenchmode Check JSON Error: #{e.message}")
-      @switched = false
-    rescue StandardError => e
-      log("Wrenchmode Check Unknown Error: #{e.message}")
-      @switched = false
-    ensure
-      @made_contact = true
-      @semaphore.unlock if @semaphore.owned?
     end
 
     private
 
     def fetch_status
+      inner_fetch
+    rescue Net::HTTPError => e
+      log("Wrenchmode Check HTTP Error: #{e.message}")
+      @switched = false
+      nil
+    rescue JSON::JSONError => e
+      log("Wrenchmode Check JSON Error: #{e.message}")
+      @switched = false
+      nil
+    rescue StandardError => e
+      log("Wrenchmode Check Unknown Error: #{e.message}")
+      @switched = false
+      nil
+    ensure
+      @made_contact = true
+    end
+
+    # Split this one out for easier mocking/stubbing in the specs
+    def inner_fetch
       payload = JSON.generate(build_update_package)
       body = nil
 
@@ -159,7 +168,11 @@ module Wrenchmode
     def start_check_thread
       Thread.new do
         while true do
-          update_status
+          if json = fetch_status
+            @queue.clear()
+            @queue.push(json)
+          end
+
           sleep(@check_delay_secs)
         end
       end
@@ -212,6 +225,5 @@ module Wrenchmode
     def symbolize_keys(hash)
       hash.each_with_object({}) { |(k,v), h| h[k.to_sym] = v }
     end
-
   end
 end

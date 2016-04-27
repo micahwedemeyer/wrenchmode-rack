@@ -30,7 +30,7 @@ describe Wrenchmode::Rack do
 
   describe "an error contacting the wrenchmode server" do
     before do
-      allow(stack).to receive(:fetch_status).and_raise(StandardError.new("Some error occurred"))
+      allow(stack).to receive(:inner_fetch).and_raise(StandardError.new("Some error occurred"))
     end
 
     it "passes the request all the way through" do
@@ -42,7 +42,7 @@ describe Wrenchmode::Rack do
     let(:status_response) { default_status_response }
 
     before do
-      allow(stack).to receive(:fetch_status).and_return(status_response)
+      allow(stack).to receive(:inner_fetch).and_return(status_response)
     end
 
     it "redirects over to wrenchmode" do
@@ -129,7 +129,7 @@ describe Wrenchmode::Rack do
       end
 
       before do
-        allow(stack).to receive(:fetch_status).and_return(status_response)
+        allow(stack).to receive(:inner_fetch).and_return(status_response)
       end
 
       it "responds with the status code" do
