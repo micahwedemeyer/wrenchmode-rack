@@ -45,6 +45,7 @@ module Wrenchmode
       @enable_reverse_proxy = false
 
       @made_contact = false
+      @semaphore = Mutex.new
     end
 
     def call(env)      
@@ -60,6 +61,8 @@ module Wrenchmode
       sleep(0.01) while !@made_contact
 
       should_display_wrenchmode = false
+      @semaphore.lock
+
       if @switched
         req = ::Rack::Request.new(env)
 
@@ -68,18 +71,24 @@ module Wrenchmode
       end
 
       if should_display_wrenchmode
-        if @enable_reverse_proxy
+        rack_response = if @enable_reverse_proxy
           reverse_proxy
         else
           redirect
         end
+
+        @semaphore.unlock
+        rack_response
       else
+        @semaphore.unlock
         @app.call(env)
       end
     end      
 
     def update_status
       json = fetch_status
+
+      @semaphore.lock
 
       @switch_url = json[SWITCH_URL_KEY]
       test_mode = json[TEST_MODE_KEY] || false
@@ -103,6 +112,7 @@ module Wrenchmode
       @switched = false
     ensure
       @made_contact = true
+      @semaphore.unlock if @semaphore.owned?
     end
 
     private
