@@ -24,7 +24,7 @@ module Wrenchmode
         ignore_test_mode: true,
         disable_local_wrench: false, # LocalWrench is our "brand name", want to avoid scaring people will talk of proxies
         status_protocol: "https",
-        status_host: "api.wrenchmode.com",
+        status_host: "wrenchmode.com",
         status_path: "/api/projects/status",
         check_delay_secs: 5,
         logging: false,
