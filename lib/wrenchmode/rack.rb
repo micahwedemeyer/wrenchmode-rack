@@ -6,7 +6,10 @@ require 'ipaddr'
 module Wrenchmode
   class Rack
     CLIENT_NAME = "wrenchmode-rack"
-    VERSION = '0.0.12'
+    VERSION = '0.0.13'
+
+    # The ENV var set on Heroku where we can retrieve the JWT
+    HEROKU_JWT_VAR = "WRENCHMODE_PROJECT_JWT"
 
     SWITCH_URL_KEY = "switch_url"
     TEST_MODE_KEY = "test_mode"
@@ -31,7 +34,10 @@ module Wrenchmode
         read_timeout_secs: 3
       }.merge(opts)
 
-      @jwt = opts[:jwt]
+      # The JWT can be set either explicity, or implicitly if Wrenchmode is added as a Heroku add-on
+      # The WRENCHMODE_PROJECT_JWT variable is set as part of the Heroku add-on provisioning process
+      @jwt = opts[:jwt] || ENV[HEROKU_JWT_VAR]
+
       @ignore_test_mode = opts[:ignore_test_mode]
       @disable_reverse_proxy = opts[:disable_local_wrench]
       @force_open = opts[:force_open]
