@@ -4,6 +4,28 @@
 
 This is a [Rack Middleware](http://rack.github.io/) for managing maintenance mode on your Ruby/Rack/Rails web application using [Wrenchmode](http://wrenchmode.com).
 
+## Installation: Heroku Add-on (Coming soon...)
+
+(Note: We are still waiting on final approval from Heroku for our add-on)
+
+Add the [Wrenchmode Heroku add-on](https://elements.heroku.com/addons) to your application's list of add-ons.
+
+And then add this line to your application's Gemfile:
+
+```ruby
+gem 'wrenchmode-rack'
+```
+
+And then execute:
+
+    $ bundle
+
+Or install it yourself as:
+
+    $ gem install wrenchmode-rack
+
+The gem will automatically pull everything it needs from your application's Heroku environment.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -20,7 +42,15 @@ Or install it yourself as:
 
     $ gem install wrenchmode-rack
 
-## Usage
+## Usage: Heroku Add-on (Coming soon...)
+
+(Note: We are still waiting on final approval from Heroku for our add-on)
+
+Add the [Wrenchmode Heroku add-on](https://elements.heroku.com/addons) to your application's list of add-ons. Deploy your application after installing the gem (see Installation above).
+
+On deployment, the wrenchmode-rack gem will automatically pick up everything it needs from your application's Heroku environment.
+
+## Usage: Manual Installation
 
 ### In a Rails application
 

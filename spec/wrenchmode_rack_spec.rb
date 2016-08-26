@@ -155,6 +155,27 @@ describe Wrenchmode::Rack do
     end
   end
 
+  describe "on Heroku" do
+    # Do not set a specific JWT. It will be introspected from the ENV vars
+    let(:stack) { Wrenchmode::Rack.new(app) }
+    let(:status_response) { default_status_response }
+
+    before do
+      ENV[Wrenchmode::Rack::HEROKU_JWT_VAR] = "my-jwt"
+      allow(stack).to receive(:inner_fetch).and_return(status_response)
+    end
+
+    after do
+      ENV.delete(Wrenchmode::Rack::HEROKU_JWT_VAR)
+    end
+
+    it "redirects over to wrenchmode" do
+      expect(response).to be_wrenchmode_redirect
+    end
+  end
+
+
+
   describe "status update to the wrenchmode server" do
     it "builds the correct update package" do
       package = stack.send(:build_update_package)
