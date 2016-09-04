@@ -6,7 +6,7 @@ require 'ipaddr'
 module Wrenchmode
   class Rack
     CLIENT_NAME = "wrenchmode-rack"
-    VERSION = '0.0.13'
+    VERSION = '0.0.14'
 
     # The ENV var set on Heroku where we can retrieve the JWT
     HEROKU_JWT_VAR = "WRENCHMODE_PROJECT_JWT"
