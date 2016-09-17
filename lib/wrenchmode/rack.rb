@@ -6,7 +6,7 @@ require 'ipaddr'
 module Wrenchmode
   class Rack
     CLIENT_NAME = "wrenchmode-rack"
-    VERSION = '0.0.14'
+    VERSION = '0.1.0'
 
     # The ENV var set on Heroku where we can retrieve the JWT
     HEROKU_JWT_VAR = "WRENCHMODE_PROJECT_JWT"
@@ -31,7 +31,8 @@ module Wrenchmode
         status_path: "/api/projects/status",
         check_delay_secs: 5,
         logging: false,
-        read_timeout_secs: 3
+        read_timeout_secs: 3,
+        trust_remote_ip: true
       }.merge(opts)
 
       # The JWT can be set either explicity, or implicitly if Wrenchmode is added as a Heroku add-on
@@ -47,6 +48,7 @@ module Wrenchmode
       @read_timeout_secs = opts[:read_timeout_secs]
       @ip_whitelist = []
       @logger = nil
+      @trust_remote_ip = opts[:trust_remote_ip]
 
       @enable_reverse_proxy = false
 
@@ -81,10 +83,9 @@ module Wrenchmode
 
       should_display_wrenchmode = false
       if @switched
-        req = ::Rack::Request.new(env)
 
         should_display_wrenchmode = !@force_open
-        should_display_wrenchmode &&= !ip_whitelisted?(req)
+        should_display_wrenchmode &&= !ip_whitelisted?(env)
       end
 
       if should_display_wrenchmode
@@ -184,12 +185,22 @@ module Wrenchmode
       end
     end
 
-    def ip_whitelisted?(request)
-      return false unless request.ip
-      client_ip = IPAddr.new(request.ip)
-      @ip_whitelist.any? do |ip_address|
-        IPAddr.new(ip_address).include?(client_ip)
+    def ip_whitelisted?(env)
+      client_ips(env).any? do |client_ip|
+        @ip_whitelist.any? do |ip_address|
+          IPAddr.new(ip_address).include?(client_ip)
+        end
       end
+    end
+
+    def client_ips(env)
+      request = ::Rack::Request.new(env)
+      ips = request.ip ? [request.ip] : []
+      if @trust_remote_ip
+        ips << env.remote_ip.to_s if env.respond_to?(:remote_ip)
+        ips << env["action_dispatch.remote_ip"].to_s if Module.const_defined?("ActionDispatch::RemoteIp") && env["action_dispatch.remote_ip"]
+      end
+      ips
     end
 
     def build_update_package

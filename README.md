@@ -56,7 +56,7 @@ On deployment, the wrenchmode-rack gem will automatically pick up everything it 
 
 ```ruby
 # config/environments/production.rb
-config.middleware.use Wrenchmode::Rack, jwt: "your-long-jwt"
+config.middleware.insert_before 0, Wrenchmode::Rack, jwt: "your-long-jwt"
 
 # If you want to test in staging prior to deploying to production.
 # (Coming soon, still not implemented...)
@@ -75,6 +75,19 @@ Bundler.require(:default)
 use Wrenchmode::Rack, jwt: "your-long-jwt"
 ```
 
+## IP Whitelisting and Proxies (including Heroku)
+
+If you are behind a proxy (ie. you are on Heroku, Amazon ELB, nginx proxy, etc.) then you will most likely need to use the `ActionDispatch::RemoteIp` Rack middleware to correctly retrieve the client's IP address. This is included automatically for Rails, but not for vanilla Rack applications.
+
+To use Wrenchmode with a proxy, configure it as follows:
+
+```ruby
+# config/environments/production.rb
+config.middleware.insert_after ActionDispatch::RemoteIp, Wrenchmode::Rack, jwt: "your-long-jwt"
+```
+
+Note: The `jwt` option is not necessary on Heroku, as this is automatically set when you install the Add-on.
+
 ## Advanced Configuration Options
 
 You can also specify the following options to the middleware layer:
@@ -84,6 +97,8 @@ You can also specify the following options to the middleware layer:
 `ignore_test_mode` - (Coming soon...) Set to false to if you want the middleware to respond to a project that is in Test mode on Wrenchmode.com This can be useful if you want to test Wrenchmode in a development or staging environment prior to deploying to production. (Default true)
 
 `disable_local_wrench` - (Coming soon...) Set to true if you want to disable LocalWrench mode, where the Wrenchmode page is served on your domain. Disabling it will instead force a redirect to the Wrenchmode.com domain. Note: Unless you explicitly want this behavior, it's best to leave this at the default. (Default false)
+
+`trust_remote_ip` - Set to false to ignore the IP addresses in the X-Forwarded-For header. This setting only matters for IP whitelisting. If you are behind a proxy (ie. Heroku, Amazon ELB, and many others) then this must be true for IP whitelisting to work. In addition, you must install the ActionDispatch::RemoteIp Rack layer. This is automatic if you are using Rails. (Default true)
 
 `check_delay_secs` - Change this to modify the rate at which the middleware polls Wrenchmode for updates. Unlikely that this needs anything faster than the default. (Default 5)
 

@@ -1,6 +1,18 @@
 require 'spec_helper'
 require 'socket'
 
+class RemoteIp
+  def initialize(app, remote_ip)
+    @app = app
+    @remote_ip = remote_ip
+  end
+
+  def call(env)
+    env.stub(:remote_ip) { @remote_ip }
+    @app.call(env)
+  end
+end
+
 describe Wrenchmode::Rack do
   it 'has a version number' do
     expect(Wrenchmode::Rack::VERSION).not_to be nil
@@ -8,7 +20,8 @@ describe Wrenchmode::Rack do
 
   let(:response_body) { "Hello, world." }
   let(:app) { proc{ [200,{},[response_body]] } }
-  let(:stack) { Wrenchmode::Rack.new(app, jwt: "my-jwt") }
+  let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app, jwt: "my-jwt") }
+  let(:stack) { wrenchmode_middleware }
   let(:linted_stack) { Rack::Lint.new(stack) }
   let(:request) { Rack::MockRequest.new(linted_stack) }
   let(:response) { request.get("/") }
@@ -42,7 +55,7 @@ describe Wrenchmode::Rack do
     let(:status_response) { default_status_response }
 
     before do
-      allow(stack).to receive(:inner_fetch).and_return(status_response)
+      allow(wrenchmode_middleware).to receive(:inner_fetch).and_return(status_response)
     end
 
     it "redirects over to wrenchmode" do
@@ -51,7 +64,7 @@ describe Wrenchmode::Rack do
 
     describe "in test mode" do
       describe "with test mode ignored" do
-        let(:stack) { Wrenchmode::Rack.new(app, jwt: "my-jwt") } # Ignore test mode is true by default
+        let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app, jwt: "my-jwt") } # Ignore test mode is true by default
         let(:status_response) { default_status_response.merge("test_mode" => true) }
 
         it "passes the request all the way through" do
@@ -60,7 +73,7 @@ describe Wrenchmode::Rack do
       end
 
       describe "with test mode not ignored" do
-        let(:stack) { Wrenchmode::Rack.new(app, jwt: "my-jwt", ignore_test_mode: false) }
+        let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app, jwt: "my-jwt", ignore_test_mode: false) }
         let(:status_response) { default_status_response.merge("test_mode" => true) }
 
         it "redirects to wrenchmode" do
@@ -92,7 +105,7 @@ describe Wrenchmode::Rack do
         ]
       end
       let(:status_response) { default_status_response.merge("ip_whitelist" => ip_whitelist) }
-      let(:stack) { Wrenchmode::Rack.new(app, jwt: "my-jwt") }
+      let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app, jwt: "my-jwt") }
 
       describe "with a request from inside the whitelist" do
         it "passes through to the app" do
@@ -107,6 +120,46 @@ describe Wrenchmode::Rack do
         it "redirects to wrenchmode" do
           rejected_ips.each do |ip|
             response = request.get("/", "REMOTE_ADDR" => ip)
+            expect(response).to be_wrenchmode_redirect
+          end
+        end
+      end
+
+      describe "with a proxied IP address from inside the whitelist" do
+        let(:stack) do
+          RemoteIp.new(wrenchmode_middleware, allowed_ips[0])
+        end
+
+        it "passes through the proxy IP" do
+          allowed_ips.each do |ip|
+            response = request.get("/", "REMOTE_ADDR" => rejected_ips[0])
+            expect(response).to be_standard_response
+          end
+        end
+      end
+
+      describe "with a proxied IP address from outside the whitelist" do
+        let(:stack) do
+          RemoteIp.new(wrenchmode_middleware, rejected_ips[0])
+        end
+
+        it "redirects to wrenchmode" do
+          rejected_ips.each do |ip|
+            response = request.get("/", "REMOTE_ADDR" => ip)
+            expect(response).to be_wrenchmode_redirect
+          end
+        end
+      end
+
+      describe "with a proxied IP address from inside the whitelist, but remote_ip is untrusted" do
+        let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app, jwt: "my-jwt", trust_remote_ip: false) }
+        let(:stack) do
+          RemoteIp.new(wrenchmode_middleware, allowed_ips[0])
+        end
+
+        it "redirects to wrenchmode" do
+          allowed_ips.each do |ip|
+            response = request.get("/", "REMOTE_ADDR" => rejected_ips[0])
             expect(response).to be_wrenchmode_redirect
           end
         end
@@ -129,7 +182,7 @@ describe Wrenchmode::Rack do
       end
 
       before do
-        allow(stack).to receive(:inner_fetch).and_return(status_response)
+        allow(wrenchmode_middleware).to receive(:inner_fetch).and_return(status_response)
       end
 
       it "responds with the status code" do
@@ -146,7 +199,7 @@ describe Wrenchmode::Rack do
       end
 
       describe "with reverse proxy disabled" do
-        let(:stack) { Wrenchmode::Rack.new(app, disable_local_wrench: true, jwt: "my-jwt") }
+        let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app, disable_local_wrench: true, jwt: "my-jwt") }
 
         it "redirects instead of reverse proxy response" do
           expect(response).to be_wrenchmode_redirect
@@ -157,7 +210,7 @@ describe Wrenchmode::Rack do
 
   describe "on Heroku" do
     # Do not set a specific JWT. It will be introspected from the ENV vars
-    let(:stack) { Wrenchmode::Rack.new(app) }
+    let(:wrenchmode_middleware) { Wrenchmode::Rack.new(app) }
     let(:status_response) { default_status_response }
 
     before do
@@ -174,11 +227,9 @@ describe Wrenchmode::Rack do
     end
   end
 
-
-
   describe "status update to the wrenchmode server" do
     it "builds the correct update package" do
-      package = stack.send(:build_update_package)
+      package = wrenchmode_middleware.send(:build_update_package)
       expect(package[:hostname]).to eq(Socket.gethostname)
       expect(package[:pid]).to eq(Process.pid)
       expect(package[:client_name]).to eq("wrenchmode-rack")
